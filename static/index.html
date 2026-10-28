@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>太空死灵作家助手</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="tomb-world" aria-hidden="true"><i></i><i></i><i></i></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">☥</span><div><strong>太空死灵</strong><small>作家助手 · NECRON SCRIPTORIUM</small></div></div>
+    <div class="book-heading"><span id="currentBookName">还没有选择书籍</span><span id="totalWords">0 字</span></div>
+    <div class="top-actions">
+      <button class="text-button" id="helpButton">第一次使用</button>
+      <button class="text-button" id="exportButton">导出全书</button>
+      <button class="settings-button" id="settingsButton"><span class="status-dot" id="apiDot"></span>API 设置</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="book-picker">
+        <label for="bookSelect">我的作品</label>
+        <div class="picker-row"><select id="bookSelect"></select><button class="square-button" id="newBookButton" title="新建小说">＋</button></div>
+      </div>
+      <div class="library-actions"><button class="book-info-button" id="bookInfoButton">作品档案 · 大纲</button><button class="settings-library-button" id="settingsLibraryButton"><span>▦</span>设定库 · 王朝档案</button></div>
+      <div class="section-heading"><span>章节列表</span><div><button class="link-button" id="importChaptersButton">批量导入</button><button class="link-button" id="newChapterButton">＋ 新章节</button></div></div>
+      <input type="file" id="batchImportInput" accept=".txt,.md" multiple hidden>
+      <div class="chapter-list" id="chapterList"><div class="empty-small">新建一本书后，在这里管理章节</div></div>
+      <div class="sidebar-footer">书稿自动保存在这台电脑</div>
+    </aside>
+
+    <section class="editor-panel">
+      <div class="editor-empty" id="editorEmpty">
+        <div class="empty-icon">☥</div>
+        <h1>唤醒沉睡的故事王朝</h1>
+        <p>新建小说，或者在左侧选择章节。<br>每一段文字都会保存在这台机器中，不会丢失。</p>
+        <button class="primary-button" id="emptyNewBook">启动新的故事墓穴</button>
+      </div>
+      <div class="editor-content hidden" id="editorContent">
+        <div class="editor-toolbar">
+          <input id="chapterTitle" class="chapter-title" placeholder="输入章节标题">
+          <div class="editor-tools">
+            <button class="text-button" id="fontButton">字号 <span id="fontSizeLabel">18</span></button>
+            <button class="text-button" id="splitChapterButton">自动分章</button>
+            <button class="text-button" id="versionsButton">历史版本</button>
+            <button class="text-button danger-text" id="deleteChapterButton">删除</button>
+          </div>
+        </div>
+        <div class="save-line"><span id="saveStatus">已保存</span><span id="chapterWords">本章 0 字</span></div>
+        <textarea id="chapterEditor" placeholder="从这里开始写正文……&#10;&#10;也可以点右侧“写本章”，让 Kimi 先给你一个草稿。" spellcheck="false"></textarea>
+        <div class="editor-bottom"><button class="primary-button small" id="saveButton">保存并留一个旧版本</button><button class="text-button" id="exportChapterButton">导出本章</button></div>
+      </div>
+    </section>
+
+    <aside class="ai-panel">
+      <div class="ai-title"><div><strong>死灵抄写引擎</strong><small>KIMI · <span id="modelLabel">K3.1 Pro</span></small></div><span class="ai-badge">NECRON AI</span></div>
+      <button class="context-button" id="contextButton">参考前文与设定 <span id="contextSummary">自动精选 · 最多 5 万字</span></button>
+      <div class="action-grid" id="actionGrid">
+        <button data-action="start">帮我开书</button>
+        <button data-action="outline">写大纲</button>
+        <button data-action="character">设计人物</button>
+        <button data-action="write" class="selected">写本章</button>
+        <button data-action="plot">续写情节</button>
+        <button data-action="continue">续写正文</button>
+        <button data-action="review">审查本章</button>
+        <button data-action="deslop">去 AI 味</button>
+        <button data-action="analyze">拆解参考书</button>
+      </div>
+      <div class="reference-row hidden" id="referenceRow"><label for="referenceFile">选择参考书 TXT</label><input type="file" id="referenceFile" accept=".txt"><small id="referenceFileName">只分析你提供的文本</small></div>
+      <label class="instruction-label" for="workflowPreset">工作流灵感卡</label>
+      <select id="workflowPreset" class="workflow-select"><option value="">自然续写</option><option value="让新阻碍打断当前计划，冲突逐步升级，不靠巧合解决。">冲突升级</option><option value="从前文挑一条已有伏笔自然推进或回收，保留新的期待。">伏笔回收</option><option value="让两名已有关联的角色相遇，用立场和选择推动剧情，不写纯闲聊。">角色相遇</option><option value="让角色在既有危机中做出有代价的选择，逃生依据来自前文。">危机逃生</option><option value="通过共同经历和分寸合适的变化推进关系，避免突然亲密。">感情推进</option></select>
+      <label class="instruction-label" for="aiInstruction">告诉 AI 这次怎么写 <span>可以留空</span></label>
+      <textarea id="aiInstruction" placeholder="例如：本章 2500 字，主角第一次进城，结尾遇到追杀。"></textarea>
+      <button class="generate-button" id="generateButton">✦ 让 Kimi 写本章</button>
+      <div class="ai-status" id="aiStatus">选择功能，再点生成。结果不会自动覆盖正文。</div>
+      <div class="ai-output-wrap"><div class="ai-output" id="aiOutput">AI 写好的内容会显示在这里。</div><div class="output-loading hidden" id="outputLoading"><i></i><i></i><i></i></div></div>
+      <div class="ai-result-actions hidden" id="aiResultActions">
+        <button id="insertAiButton">插入正文</button>
+        <button id="replaceAiButton">替换本章</button>
+        <button id="plotToProseButton" class="hidden">用此情节写正文</button>
+        <button id="saveAiButton" class="hidden">存入作品资料</button>
+        <button id="copyAiButton">复制</button>
+      </div>
+    </aside>
+  </main>
+
+  <dialog id="newBookModal" class="modal">
+    <form id="newBookForm">
+      <div class="modal-header"><div><h2>新建一本小说</h2><p>先填能想到的，其他以后都能改。</p></div><button type="button" class="close-button" data-close="newBookModal">×</button></div>
+      <label>小说名字 <b>必填</b><input name="title" required placeholder="例如：长夜有灯"></label>
+      <div class="form-grid"><label>题材<input name="genre" placeholder="玄幻、都市、言情……"></label><label>准备写多少字<input name="target_words" type="number" min="1000" value="100000"></label></div>
+      <label>一句话故事<textarea name="synopsis" placeholder="谁，在什么处境，想做到什么，又遇到什么阻碍？"></textarea></label>
+      <div class="form-grid"><label>写给谁看<input name="audience" placeholder="例如：起点男频读者"></label><label>想要的文风<input name="style" placeholder="例如：爽利、细腻、轻松"></label></div>
+      <label>不想出现的内容<input name="forbidden" placeholder="没有就留空"></label>
+      <div class="modal-actions"><button type="button" data-close="newBookModal">取消</button><button class="primary-button" type="submit">创建小说</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsModal" class="modal">
+    <form id="settingsForm">
+      <div class="modal-header"><div><h2>连接 Kimi</h2><p>就像给软件插上电源，只需设置一次。</p></div><button type="button" class="close-button" data-close="settingsModal">×</button></div>
+      <div class="plain-tip">API Key 是一长串账号密码，只保存在这台电脑。先选对 Key 所属的接口，否则会一直提示认证失败。</div>
+      <label>接口类型<select id="apiProvider"><option value="platform">Kimi 开放平台（按量付费 Key）</option><option value="code">Kimi Code（会员 Key）</option><option value="custom">自定义兼容接口</option></select></label>
+      <label>API Key <span class="saved-label" id="keySavedLabel"></span><input id="apiKey" type="password" autocomplete="off" placeholder="把 API Key 粘贴到这里"></label>
+      <label>API 地址<input id="baseUrl" value="https://api.moonshot.cn/v1"></label>
+      <label>模型名称<input id="modelName" value="kimi-k3.1-pro"></label>
+      <div class="setting-note">开放平台使用 <b>api.moonshot.cn/v1</b> + <b>kimi-k3.1-pro</b>，按量计费。会员 Code Key 使用 <b>api.kimi.com/coding/v1</b> + <b>k3.1-pro</b>，两种 Key 不能混用。</div>
+      <div class="connection-result" id="connectionResult"></div>
+      <div class="modal-actions split"><button type="button" class="danger-text" id="clearKeyButton">清除本机 Key</button><div><button type="button" id="testApiButton">测试连接</button><button class="primary-button" type="submit">保存设置</button></div></div>
+    </form>
+  </dialog>
+
+  <dialog id="bookInfoModal" class="modal wide-modal">
+    <form id="bookInfoForm">
+      <div class="modal-header"><div><h2>作品档案</h2><p>故事核心与大纲；角色和世界规则请放入设定库。</p></div><button type="button" class="close-button" data-close="bookInfoModal">×</button></div>
+      <div class="form-grid"><label>小说名字<input name="title" required></label><label>题材<input name="genre"></label></div>
+      <label>一句话故事<textarea name="synopsis" class="short-textarea"></textarea></label>
+      <label>故事大纲<textarea name="outline" class="tall-textarea" placeholder="可以手写，也可以点右侧“写大纲”，生成后存入这里。"></textarea></label>
+      <details class="legacy-role-data"><summary>旧版自由角色资料（兼容保留）</summary><textarea name="characters" class="short-textarea" placeholder="旧资料仍会提供给 AI；新角色请使用设定库。"></textarea></details>
+      <div class="modal-actions"><button type="button" data-close="bookInfoModal">取消</button><button class="primary-button" type="submit">保存作品档案</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsLibraryModal" class="modal settings-modal">
+    <div class="modal-header"><div><h2>王朝档案库</h2><p>角色、背景、势力、地点与物品，各自封存。</p></div><button class="close-button" data-close="settingsLibraryModal">×</button></div>
+    <div class="settings-workspace">
+      <aside class="settings-nav">
+        <div class="settings-nav-heading"><span>设定</span><button id="newEntityButton" title="新建设定">＋</button></div>
+        <div id="settingsCategoryNav"></div>
+        <div class="settings-nav-note">续写时只关联需要的档案，减少 token 消耗。</div>
+      </aside>
+      <section class="settings-main">
+        <div class="settings-main-head"><div><h2 id="settingsSectionTitle">角色</h2><p id="settingsSectionDesc"></p></div><button class="primary-button small" id="settingsAddEntityButton">＋ 新增角色</button></div>
+        <div id="settingsEntityList" class="settings-entity-list"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="versionsModal" class="modal wide-modal">
+    <div class="modal-header"><div><h2>本章的历史版本</h2><p>恢复前会再给现在的正文留一个备份。</p></div><button class="close-button" data-close="versionsModal">×</button></div>
+    <div id="versionsList" class="versions-list"></div>
+  </dialog>
+
+  <dialog id="helpModal" class="modal">
+    <div class="modal-header"><div><h2>四步开始写小说</h2><p>不用懂编程，也不用输入命令。</p></div><button class="close-button" data-close="helpModal">×</button></div>
+    <ol class="help-steps"><li><b>连接 AI</b><span>点右上角“API 设置”，粘贴 Key，点“测试连接”。</span></li><li><b>新建小说</b><span>点左侧 ＋，写一个名字和大概想法。</span></li><li><b>准备大纲和人物</b><span>点“帮我开书”，再把结果存入作品资料。</span></li><li><b>开始写正文</b><span>新建章节，点“写本章”。满意后再插入或替换正文。</span></li></ol>
+    <div class="plain-tip">AI 结果不会自动覆盖你的正文。每次替换前都会留旧版本，可以在“历史版本”里找回。</div>
+    <div class="modal-actions"><button class="primary-button" data-close="helpModal">知道了</button></div>
+  </dialog>
+
+  <dialog id="contextModal" class="modal wide-modal">
+    <div class="modal-header"><div><h2>本次参考哪些内容？</h2><p>最近两章优先，其余按相关度精选，只发送选中的章节和设定。</p></div><button class="close-button" data-close="contextModal">×</button></div>
+    <label>前文最多参考<select id="contextBudget"><option value="10000">1 万字</option><option value="30000">3 万字</option><option value="50000" selected>5 万字</option><option value="80000">8 万字</option></select></label>
+    <div class="plain-tip">不勾选章节时，软件自动精选。勾选章节后会优先保留，再自动补充相关章节；不超过上面的字数上限。</div>
+    <div class="context-section-head"><h3>关联前文章节 <span id="contextChapterCount"></span></h3><div><button type="button" id="contextLatestButton">最近两章</button><button type="button" id="contextClearChapters">清空本章节</button></div></div>
+    <div id="contextChapterList" class="context-list context-chapter-window"></div>
+    <div class="context-section-head entity-section-head"><h3>关联角色、背景、势力等 <span id="contextEntityTotal"></span></h3></div>
+    <div id="contextEntityTabs" class="context-entity-tabs"></div>
+    <div class="context-tab-toolbar"><span id="contextEntityKindInfo">不勾选时由 AI 自动挑选</span><div><button type="button" id="contextSelectAllEntities">全选本类</button><button type="button" id="contextClearEntities">清空本类</button></div></div>
+    <div id="contextEntityList" class="context-list context-entity-window"></div>
+    <div class="modal-actions"><button id="clearContextButton">清除全部手动选择</button><button class="primary-button" id="saveContextButton">用于本次续写</button></div>
+  </dialog>
+
+  <dialog id="entityModal" class="modal entity-editor-modal">
+    <form id="entityForm">
+      <div class="modal-header"><div><h2 id="entityModalTitle">新建角色</h2><p id="entityModalHelp">一条档案只记录一个对象，续写时更容易精准关联。</p></div><button type="button" class="close-button" data-close="entityModal">×</button></div>
+      <input type="hidden" name="id">
+      <input type="hidden" name="kind" id="entityKind">
+      <div id="characterFields">
+        <div class="field-block">
+          <div class="field-heading"><label for="characterName">角色名称</label><span id="charNameCount">0 / 10</span></div>
+          <input id="characterName" maxlength="10" placeholder="输入角色名称">
+        </div>
+        <div class="field-block">
+          <label for="aliasInput">别名</label>
+          <div class="alias-box"><div id="aliasChips" class="alias-chips"></div><input id="aliasInput" placeholder="输入别名后按回车，可添加多个"></div>
+        </div>
+        <div class="field-block">
+          <label>性别</label>
+          <div class="radio-row"><label><input type="radio" name="gender" value="男"> 男</label><label><input type="radio" name="gender" value="女"> 女</label><label><input type="radio" name="gender" value="未知"> 未知</label></div>
+        </div>
+        <div class="field-block">
+          <div class="field-heading"><label for="characterPersonality">性格</label><span id="personalityCount">0 / 500</span></div>
+          <textarea id="characterPersonality" maxlength="500" placeholder="温和，不在王座旁时略显孤僻"></textarea>
+        </div>
+        <div class="field-block">
+          <label for="characterTag">标签</label>
+          <select id="characterTag"><option value="">未选择</option><option>主角</option><option>反派</option><option>善良</option><option>冷酷</option><option>理性</option><option>冲动</option><option>神秘</option><option>忠诚</option><option>狡诈</option><option>悲剧</option><option>其他</option></select>
+        </div>
+        <div class="field-block">
+          <div class="field-heading"><label for="characterBackground">背景</label><span id="backgroundCount">0 / 500</span></div>
+          <textarea id="characterBackground" maxlength="500" placeholder="来历、身份、关键经历和立场"></textarea>
+        </div>
+        <div class="field-block biography-block">
+          <div class="field-heading"><label for="characterBiography">人物小传 <span class="info-mark" title="根据上方角色资料自动扩写">?</span></label><span id="biographyCount">0 / 6000</span></div>
+          <div class="biography-action"><span>根据已有资料扩写成完整传记，不改变既定事实。</span><button type="button" id="generateBiographyButton">⚡ 一键生成小传</button></div>
+          <textarea id="characterBiography" maxlength="6000" placeholder="输入人物小传，或点击“一键生成小传”"></textarea>
+        </div>
+      </div>
+      <div id="genericFields" class="hidden">
+        <label>名称<input id="genericName" maxlength="100" placeholder="例如：守望者军团、风车镇"></label>
+        <label>别名 <span>用逗号分开，没有就留空</span><input id="genericAliases" placeholder="例如：旧王庭、灰烬城"></label>
+        <label>详细资料<textarea id="genericContent" class="tall-textarea" placeholder="规则、历史、关系、当前状态……"></textarea></label>
+      </div>
+      <div class="modal-actions entity-actions"><button type="button" class="danger-text hidden" id="deleteEntityButton">删除</button><button type="button" class="text-button" data-close="entityModal">取消</button><button class="primary-button" type="submit">保存档案</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

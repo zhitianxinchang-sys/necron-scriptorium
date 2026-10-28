@@ -1,0 +1,24 @@
+# Local data and credentials
+*.db
+*.db-shm
+*.db-wal
+*.log
+NovelStudioData/
+.verify-*/
+.desktop-*/
+
+# Third-party skills are intentionally not redistributed.
+skills/*
+!skills/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Desktop build output
+.desktop-build/
+build/
+dist/
+*.spec

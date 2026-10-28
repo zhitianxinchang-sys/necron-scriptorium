@@ -1,5 +1,7 @@
 import json
+import re
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from .chapter_splitter import split_document
@@ -374,6 +376,20 @@ class Database:
         for chapter in chapters:
             parts.extend(["", "", chapter["title"], "", chapter["content"]])
         return book["title"], "\n".join(parts) + "\n"
+
+    def delete_book(self, book_id):
+        title, text = self.export_book(book_id)
+        safe_title = re.sub(r'[\\/:*?"<>|]+', "_", title).strip()[:80] or f"书籍_{book_id}"
+        trash_dir = self.data_dir / "已删除书籍"
+        trash_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup = trash_dir / f"{safe_title}_{book_id}_{timestamp}.txt"
+        backup.write_text(text, encoding="utf-8-sig")
+        with self.connect() as conn:
+            cursor = conn.execute("DELETE FROM books WHERE id=?", (book_id,))
+            if cursor.rowcount == 0:
+                raise KeyError("这本书不存在，可能已经被删除。")
+        return backup
 
     def get_settings(self):
         with self.connect() as conn:

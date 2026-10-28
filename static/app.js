@@ -72,6 +72,7 @@ function renderBookOptions() {
   }
   for (const book of state.books) select.add(new Option(book.title, book.id));
   if (state.book) select.value = state.book.id;
+  $("deleteBookButton").disabled = !state.book;
 }
 
 function readWorkspacePosition() {
@@ -112,6 +113,10 @@ function showEmpty() {
 }
 
 async function loadBook(id, preferredChapterId = null) {
+  if (state.book && state.book.id !== Number(id)) {
+    saveAiPanelState();
+    persistCurrentContext();
+  }
   await saveCurrent();
   const payload = await api(`/api/books/${id}`);
   state.book = payload.book;
@@ -255,6 +260,40 @@ async function createChapter() {
   state.chapter = null;
   renderChapters();
   await selectChapter(payload.chapter.id);
+}
+
+function forgetBookUiState(bookId) {
+  for (const key of ["necronStudioAiPanels", "necronStudioContexts"]) {
+    try {
+      const map = JSON.parse(localStorage.getItem(key) || "{}") || {};
+      delete map[String(bookId)];
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch {}
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem("necronStudioPosition") || "null");
+    if (saved && Number(saved.book_id) === Number(bookId)) localStorage.removeItem("necronStudioPosition");
+  } catch {}
+}
+
+async function deleteBook() {
+  if (!state.book) return toast("当前没有可删除的书籍");
+  await saveCurrent();
+  const book = state.book;
+  const chapterCount = book.volumes.reduce((total, volume) => total + volume.chapters.length, 0);
+  if (!confirm(`确定删除《${book.title}》吗？\n\n这本书共有 ${chapterCount} 章。删除前会自动导出一份完整 TXT 备份，放在“已删除书籍”文件夹。`)) return;
+  const button = $("deleteBookButton");
+  button.disabled = true;
+  try {
+    await api(`/api/books/${book.id}`, {method:"DELETE"});
+    forgetBookUiState(book.id);
+    state.book = null;
+    state.chapter = null;
+    await loadBooks();
+    toast("书籍已删除，完整备份已保存到“已删除书籍”文件夹");
+  } finally {
+    button.disabled = !state.book;
+  }
 }
 
 async function readTextFile(file) {
@@ -1111,6 +1150,7 @@ function bindEvents() {
   $("newBookButton").onclick = () => openModal("newBookModal");
   $("emptyNewBook").onclick = () => state.book ? createChapter().catch(showError) : openModal("newBookModal");
   $("newBookForm").onsubmit = event => createBook(event).catch(showError);
+  $("deleteBookButton").onclick = () => deleteBook().catch(showError);
   $("bookSelect").onchange = event => loadBook(Number(event.target.value)).catch(showError);
   $("newChapterButton").onclick = () => createChapter().catch(showError);
   $("importChaptersButton").onclick = () => state.book ? $("batchImportInput").click() : openModal("newBookModal");

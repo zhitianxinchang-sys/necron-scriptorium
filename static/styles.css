@@ -58,6 +58,9 @@ button:disabled{cursor:not-allowed;opacity:.45}
 .picker-row select{min-width:0;flex:1;border:1px solid var(--line-bright);border-radius:2px;background:#0c1511;padding:9px;color:var(--ink);outline:none}
 .picker-row select:focus{border-color:var(--accent)}
 .square-button{width:37px;border:1px solid var(--line-bright);border-radius:2px;background:#122019;color:var(--accent);font-size:20px}
+.delete-book-button{display:block;margin:8px 0 0 auto;border:0;background:transparent;color:#9b625b;font-size:10px;padding:3px 0;letter-spacing:.3px}
+.delete-book-button:hover{color:var(--danger)}
+.delete-book-button:disabled{opacity:.35}
 .square-button:hover{border-color:var(--accent);box-shadow:0 0 12px #52ffa61f}
 .library-actions{display:grid;gap:6px;margin:0 16px 15px}
 .book-info-button,.settings-library-button{border:1px solid var(--line);background:#0b120f;border-radius:2px;padding:9px;color:#91a49a;text-align:left}

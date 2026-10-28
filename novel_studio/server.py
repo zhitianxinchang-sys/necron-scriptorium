@@ -179,6 +179,10 @@ def make_handler(root, data_dir):
             if match:
                 db.delete_chapter(int(match[1]))
                 return self.send_json({"ok": True})
+            match = re.fullmatch(r"/api/books/(\d+)", path)
+            if match:
+                backup = db.delete_book(int(match[1]))
+                return self.send_json({"ok": True, "backup": str(backup)})
             match = re.fullmatch(r"/api/books/(\d+)/entities/(\d+)", path)
             if match:
                 db.delete_entity(int(match[2]), int(match[1]))

@@ -14,6 +14,7 @@ APP_NAME = "太空死灵作家助手"
 MUTEX_NAME = "Local\\NecronScriptoriumDesktop"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DEFAULT_DATA = Path.home() / "Documents" / "NovelStudioData"
+DESKTOP_PORT = int(os.environ.get("NOVEL_STUDIO_DESKTOP_PORT", "48765"))
 
 
 def message_box(message, error=True):
@@ -36,7 +37,12 @@ def acquire_single_instance():
 
 def start_server(data_dir):
     data_dir.mkdir(parents=True, exist_ok=True)
-    server = NovelStudioServer(("127.0.0.1", 0), make_handler(ROOT, data_dir))
+    try:
+        server = NovelStudioServer(("127.0.0.1", DESKTOP_PORT), make_handler(ROOT, data_dir))
+    except OSError as exc:
+        raise RuntimeError(
+            f"本地端口 {DESKTOP_PORT} 被其他程序占用了。请关闭占用端口的程序后再打开。"
+        ) from exc
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

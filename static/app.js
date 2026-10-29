@@ -22,6 +22,9 @@ const apiProviders = {
 };
 let toastTimer;
 let aiPanelSaveTimer;
+const EDITOR_FONT_KEY = "necronStudioEditorFontSize";
+const EDITOR_FONT_SIZES = [12, 14, 16, 18, 20, 22];
+const TOMB_AUTOSAVE_MS = 5 * 60 * 1000;
 
 function toast(message) {
   clearTimeout(toastTimer);
@@ -60,6 +63,27 @@ function setDirty(value) {
   state.dirty = value;
   $("saveStatus").textContent = value ? "有修改，正在等待保存…" : "已保存";
   $("saveStatus").classList.toggle("dirty", value);
+}
+
+function applyEditorFontSize(size, persist = true) {
+  const chosen = EDITOR_FONT_SIZES.includes(Number(size)) ? Number(size) : 18;
+  $("fontSizeLabel").textContent = chosen;
+  $("chapterEditor").style.fontSize = chosen + "px";
+  if (persist) {
+    try {
+      localStorage.setItem(EDITOR_FONT_KEY, String(chosen));
+    } catch {}
+  }
+}
+
+async function autosaveToTomb() {
+  if (!state.chapter) return;
+  try {
+    await saveCurrent(false, "每五分钟自动保存", true);
+    toast("你的知识正在存入墓穴");
+  } catch (error) {
+    showError(error);
+  }
 }
 
 function renderBookOptions() {
@@ -197,9 +221,9 @@ async function selectChapter(id) {
   $("chapterEditor").focus();
 }
 
-async function saveCurrent(manual = false, reason = "手动保存") {
+async function saveCurrent(manual = false, reason = "手动保存", force = false) {
   clearTimeout(state.saveTimer);
-  if (!state.chapter || (!state.dirty && !manual)) return;
+  if (!state.chapter || (!state.dirty && !manual && !force)) return;
   if (state.saving) {
     await new Promise(resolve => setTimeout(resolve, 250));
     if (state.saving) return;
@@ -263,7 +287,7 @@ async function createChapter() {
 }
 
 function forgetBookUiState(bookId) {
-  for (const key of ["necronStudioAiPanels", "necronStudioContexts"]) {
+  for (const key of ["necronStudioAiPanels", "necronStudioContexts", "necronStudioSettingsLibraries"]) {
     try {
       const map = JSON.parse(localStorage.getItem(key) || "{}") || {};
       delete map[String(bookId)];
@@ -375,9 +399,26 @@ function openBookInfo() {
   openModal("bookInfoModal");
 }
 
+function saveSettingsLibraryKind() {
+  if (!state.book) return;
+  let map = {};
+  try {
+    map = JSON.parse(localStorage.getItem("necronStudioSettingsLibraries") || "{}") || {};
+  } catch {}
+  map[String(state.book.id)] = state.settingsKind;
+  try {
+    localStorage.setItem("necronStudioSettingsLibraries", JSON.stringify(map));
+  } catch {}
+}
+
 function openSettingsLibrary() {
   if (!state.book) return toast("请先新建或选择一本书");
-  state.settingsKind = "character";
+  let savedKind = "character";
+  try {
+    const map = JSON.parse(localStorage.getItem("necronStudioSettingsLibraries") || "{}") || {};
+    if (entityMeta[map[String(state.book.id)]]) savedKind = map[String(state.book.id)];
+  } catch {}
+  state.settingsKind = savedKind;
   renderSettingsLibrary();
   openModal("settingsLibraryModal");
 }
@@ -402,7 +443,11 @@ function renderSettingsLibrary() {
     const chevron = document.createElement("b");
     chevron.textContent = state.settingsKind === kind ? "⌄" : "›";
     select.append(icon, label, count, chevron);
-    select.onclick = () => {state.settingsKind = kind;renderSettingsLibrary();};
+    select.onclick = () => {
+      state.settingsKind = kind;
+      saveSettingsLibraryKind();
+      renderSettingsLibrary();
+    };
     const add = document.createElement("button");
     add.type = "button";
     add.className = "settings-category-add";
@@ -710,11 +755,19 @@ function storedContexts() {
 
 function applyStoredContextForBook(bookId) {
   const saved = storedContexts()[String(bookId)];
-  state.context = saved ? {
-    max_chars: Number(saved.max_chars) || 50000,
-    chapter_ids: Array.isArray(saved.chapter_ids) ? saved.chapter_ids.map(Number) : [],
-    entity_ids: Array.isArray(saved.entity_ids) ? saved.entity_ids.map(Number) : null,
-  } : {max_chars:50000, chapter_ids:[], entity_ids:null};
+  const validChapters = new Set(state.book.volumes.flatMap(volume => volume.chapters).map(chapter => chapter.id));
+  const validEntities = new Set((state.book.entities || []).map(entity => entity.id));
+  const chapterIds = saved && Array.isArray(saved.chapter_ids)
+    ? saved.chapter_ids.map(Number).filter(id => validChapters.has(id))
+    : [];
+  const entityIds = saved && Array.isArray(saved.entity_ids)
+    ? saved.entity_ids.map(Number).filter(id => validEntities.has(id))
+    : null;
+  state.context = {
+    max_chars: Number(saved && saved.max_chars) || 50000,
+    chapter_ids: chapterIds,
+    entity_ids: entityIds,
+  };
   updateContextSummary();
 }
 
@@ -1189,7 +1242,11 @@ function bindEvents() {
   $("exportButton").onclick = () => {if(state.book) location.href=`/api/books/${state.book.id}/export`;else toast("请先选择一本书");};
   $("exportChapterButton").onclick = async () => {await saveCurrent();location.href=`/api/chapters/${state.chapter.id}/export`;};
   $("versionsButton").onclick = () => showVersions().catch(showError);
-  $("fontButton").onclick = () => {const sizes=[12,14,16,18,20,22];const current=Number($("fontSizeLabel").textContent);const next=sizes[(sizes.indexOf(current)+1)%sizes.length];$("fontSizeLabel").textContent=next;$("chapterEditor").style.fontSize=next+"px";};
+  $("fontButton").onclick = () => {
+    const current = Number($("fontSizeLabel").textContent);
+    const index = EDITOR_FONT_SIZES.indexOf(current);
+    applyEditorFontSize(EDITOR_FONT_SIZES[(index + 1) % EDITOR_FONT_SIZES.length]);
+  };
   $("actionGrid").onclick = event => {if(event.target.dataset.action) selectAction(event.target.dataset.action);};
   $("workflowPreset").onchange = saveAiPanelState;
   $("aiInstruction").oninput = saveAiPanelState;
@@ -1214,6 +1271,12 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  let savedFontSize = 18;
+  try {
+    savedFontSize = Number(localStorage.getItem(EDITOR_FONT_KEY)) || 18;
+  } catch {}
+  applyEditorFontSize(savedFontSize, false);
+  setInterval(autosaveToTomb, TOMB_AUTOSAVE_MS);
   selectAction("write");
   try {
     state.settings = await api("/api/settings");
